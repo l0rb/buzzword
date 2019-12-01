@@ -4,6 +4,9 @@ from django.db import models
 from explorer.parts.strings import _slug_from_name
 
 class Corpus(models.Model):
+    class Meta:
+        verbose_name_plural = "Corpora" # can't tolerate "Corpuss"
+
     slug = models.SlugField(max_length=255, unique=True) # this can't be null because a name needs to exist
     name = models.CharField(max_length=255)
     language = models.CharField(max_length=255) # probably turn this into a model later
