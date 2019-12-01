@@ -1,7 +1,7 @@
 """
 buzzword explorer: build the explore page and its tabs
 """
-
+import json
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -14,6 +14,12 @@ from . import style
 from .helpers import _drop_cols_for_datatable, _get_cols, _update_frequencies
 from .strings import _capitalize_first, _make_search_name, _make_table_name
 
+DAQ_THEME = {
+    "dark": False,
+    'detail': '#007439',
+    'primary': '#a32424', # button when switched 'on' / not matching
+    'secondary': '#44ad78' # bottom off / matching
+}
 
 def _make_storage(configs):
     """
@@ -60,6 +66,8 @@ def _build_dataset_space(df, config):
             id="matching-box",
             children=[
                 daq.BooleanSwitch(
+                    theme=DAQ_THEME,
+                    className="colour-off",
                     id="skip-switch",
                     on=False,
                     style={"verticalAlign": "top", **style.MARGIN_5_MONO},
@@ -108,7 +116,7 @@ def _build_dataset_space(df, config):
         columns=columns,
         data=data,
         editable=True,
-        style_cell={**style.HORIZONTAL_PAD_5, **{"whiteSpace": "normal"}},
+        style_cell={**style.HORIZONTAL_PAD_5, **{"minWidth": "60px"}},
         filter_action="native",
         sort_action="native",
         sort_mode="multi",
@@ -200,7 +208,8 @@ def _build_frequencies_space(corpus, table, config):
         columns=columns,
         data=data,
         editable=True,
-        style_cell=style.HORIZONTAL_PAD_5,
+        style_cell={**style.HORIZONTAL_PAD_5, **{"maxWidth": "145px", "minWidth": "60px"}},
+        # style_table={'overflowX': 'scroll'},
         filter_action="native",
         sort_action="native",
         sort_mode="multi",
@@ -211,7 +220,7 @@ def _build_frequencies_space(corpus, table, config):
         page_action="none",
         fixed_rows={"headers": True, "data": 0},
         virtualization=True,
-        style_table={"maxHeight": "2000px"},
+        # style_table={"maxHeight": "2000px"},
         style_header=style.BOLD_DARK,
         style_cell_conditional=style.LEFT_ALIGN,
         style_data_conditional=[style_index] + style.STRIPES,
@@ -225,6 +234,7 @@ def _build_frequencies_space(corpus, table, config):
     multi = html.Span(
         children=[
             daq.BooleanSwitch(
+                theme=DAQ_THEME,
                 id="multiindex-switch",
                 on=False,
                 disabled=True,
@@ -273,7 +283,17 @@ def _build_concordance_space(df, config):
     if "speaker" in df.columns:
         meta.append("speaker")
 
-    df = df.just.x.NOUN.conc(metadata=meta, window=(100, 100))
+    # do an initial search, potentially from corpora.json
+    # default to, get nouns
+    if config.get("initial_query"):
+        query = json.loads(config["initial_query"])
+    else:
+        query = {"target": "x", "query": "NOUN"}
+
+    print(f"Making concordance for {config['corpus_name']} ...")
+    df = getattr(df.just, query["target"])(query["query"])
+    df = df.conc(metadata=meta, window=(100, 100))
+    print('Done!')
 
     just = ["left", "match", "right", "file", "s", "i"]
     if "speaker" in df.columns:
@@ -281,7 +301,7 @@ def _build_concordance_space(df, config):
     df = df[just]
     columns = [
         {
-            "name": SHORT_TO_COL_NAME.get(i, i),
+            "name": _capitalize_first(SHORT_TO_COL_NAME.get(i, i)),
             "id": i,
             "deletable": i not in ["left", "match", "right"],
             "hideable": True,
@@ -300,7 +320,7 @@ def _build_concordance_space(df, config):
                 columns=columns,
                 data=data,
                 editable=True,
-                style_cell=style.HORIZONTAL_PAD_5,
+                style_cell={**style.HORIZONTAL_PAD_5, **{"minWidth": "60px"}},
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
@@ -357,6 +377,7 @@ def _build_chart_space(table, config):
             style=style.MARGIN_5_MONO,
         )
         transpose = daq.BooleanSwitch(
+            theme=DAQ_THEME,
             id=f"chart-transpose-{chart_num}",
             on=False,
             style={"verticalAlign": "middle"},
