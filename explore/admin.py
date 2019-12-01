@@ -16,4 +16,4 @@ class CorpusAdmin(admin.ModelAdmin):
 @admin.register(Corpus, site=user_admin)
 class CorpusUser(admin.ModelAdmin):
     list_display = ('slug',)
-    fields = ['disabled', 'desc']
+    fields = ['desc']
